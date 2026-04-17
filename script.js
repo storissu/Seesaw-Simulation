@@ -1,13 +1,19 @@
 let currentWeight = 0;
 let rightWeight = 0;
 let leftWeight = 0;
+let leftTorque = 0;
+let rightTorque = 0;
+let tiltAngle = 0;
 let newCursor;
 
 function initializeInfo() {
-  let currentWeight = 0;
-  let rightWeight = 0;
-  let leftWeight = 0;
-  let newCursor;
+  currentWeight = 0;
+  rightWeight = 0;
+  leftWeight = 0;
+  leftTorque = 0;
+  rightTorque = 0;
+  tiltAngle = 0;
+  newCursor;
 
   displayInfo();
 }
@@ -35,8 +41,12 @@ function generateRandomWeight() {
 function calculateTorque(weight, distance) {
   return weight * distance;
 }
+
 function calculateTiltAngle(leftTorque, rightTorque) {
-  return Math.max(-30, Math.min(30, (rightTorque - leftTorque) / 10));
+  const diff = rightTorque - leftTorque;
+  const maxTorque = 5000; // test ederek ayarla
+
+  return Math.max(-30, Math.min(30, (diff / maxTorque) * 30));
 }
 
 function displayInfo() {
@@ -52,13 +62,23 @@ function displayInfo() {
     .getElementById("next-weight")
     .querySelector(".info-text");
 
-  if (leftWeight === null || rightWeight === null || nextWeightElement === null)
+  const tiltAngleElement = document
+    .getElementById("tilt-angle")
+    .querySelector(".info-text");
+
+  if (
+    leftWeightElement === null ||
+    rightWeightElement === null ||
+    nextWeightElement === null ||
+    tiltAngleElement === null
+  )
     return;
 
   currentWeight = generateRandomWeight();
   rightWeightElement.textContent = `${rightWeight} kg`;
   leftWeightElement.textContent = `${leftWeight} kg`;
   nextWeightElement.textContent = `${currentWeight} kg`;
+  tiltAngleElement.textContent = `${tiltAngle.toFixed(1)}° `;
 }
 
 //size of the cursor is calculated according to the weight
@@ -71,7 +91,7 @@ function updateCursorSize() {
 
 //cursor changes to a circle when it comes to the seesaw area
 function changeCursor() {
-  const seesaw = document.querySelector(".seesaw");
+  const seesaw = document.querySelector(".plank-container");
   newCursor = document.createElement("div");
   newCursor.className = "cursor-circle";
   document.body.appendChild(newCursor);
@@ -97,17 +117,25 @@ function changeCursor() {
 
   seesaw.addEventListener("click", (e) => {
     const seesawRect = seesaw.getBoundingClientRect();
-    const seesawCenterX = seesawRect.left + seesawRect.width / 2;
+    const pivot = seesawRect.left + seesawRect.width / 2;
     const clickX = e.clientX;
+    const distanceFromPivot = clickX - pivot;
 
-    if (clickX < seesawCenterX) {
+    if (distanceFromPivot < 0) {
       leftWeight += currentWeight;
+      leftTorque += calculateTorque(currentWeight, Math.abs(distanceFromPivot));
     } else {
       rightWeight += currentWeight;
+      rightTorque += calculateTorque(
+        currentWeight,
+        Math.abs(distanceFromPivot),
+      );
     }
 
+    console.log(clickX);
+    console.log(pivot);
+    tiltAngle = calculateTiltAngle(leftTorque, rightTorque);
     displayInfo();
-
     newCursor.style.backgroundColor = generateColor();
     updateCursorSize(newCursor);
   });
