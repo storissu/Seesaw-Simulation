@@ -61,7 +61,7 @@ function calculateDrop(mouseX, size, targetTiltAngle = tiltAngle) {
   const halfPlank = plankElement ? plankElement.offsetWidth / 2 : 0;
   const temp_dx = mouseX - center;
   const dx = Math.max(-halfPlank, Math.min(halfPlank, temp_dx));
-  const plank_x = halfPlank + dx; //location according to the plank
+  const plank_x = halfPlank + dx; //location according to the planks left side
   const dropLocation = getDropLocation(plankElement, plank_x, size);
   const dropLocation_x = dropLocation.x;
   const dropLocation_y = dropLocation.y;
@@ -155,6 +155,19 @@ function updateCircleSize() {
   const size = Math.log(currentWeight + 1) * 17;
   previewCircle.style.width = `${size}px`;
   previewCircle.style.height = `${size}px`;
+  return size;
+}
+
+function addWeightVisualization(ballElement, weight, size) {
+  const labelSize = Math.max(8, Math.min(14, size * 0.34)); //adjust fontsize according to ball size
+  let label = ballElement.querySelector(".ball-label");
+  if (!label) {
+    label = document.createElement("span");
+    label.className = "ball-label";
+    ballElement.appendChild(label);
+  }
+  label.textContent = `${weight}kg`;
+  label.style.fontSize = `${labelSize}px`;
 }
 
 function generatePreview() {
@@ -171,11 +184,24 @@ function generatePreview() {
 }
 
 function updatePreview(mouseX) {
-  const size = Math.log(currentWeight + 1) * 17;
-  const { previewHeight, previewLineEnd_Y, dropLocation_x } = calculateDrop(
+  const size = updateCircleSize();
+  addWeightVisualization(previewCircle, currentWeight, size);
+  const { previewHeight, previewLineEnd_Y, dropLocation_x, dx } = calculateDrop(
     mouseX,
     size,
   );
+
+  //adding distance visualization
+  const label_size = Math.max(8, Math.min(14, size * 0.34)); //adjust fontsize according to ball size
+  let distance_label = previewCircle.querySelector(".distance-label");
+  if (!distance_label) {
+    distance_label = document.createElement("span");
+    distance_label.className = "distance-label";
+    previewCircle.appendChild(distance_label);
+  }
+  distance_label.textContent = `${dx.toFixed(1)}px`;
+  distance_label.style.fontSize = `${label_size}px`;
+  //distance label end
 
   previewCircle.style.left = `${dropLocation_x}px`;
   previewCircle.style.top = `${previewHeight}px`;
@@ -198,12 +224,14 @@ function putBallOnPlank(plank_x, color, size) {
   ball.style.height = `${size}px`;
   ball.style.left = `${limit_plankX}px`;
   ball.style.top = "0";
+  addWeightVisualization(ball, currentWeight, size);
+  ball.dataset.weight = String(currentWeight);
   plankElement.appendChild(ball);
 }
 
 function dropAnimation(clickX, onComplete) {
   const color = previewCircle.style.backgroundColor;
-  const size = Math.log(currentWeight + 1) * 17;
+  const size = updateCircleSize();
   const { previewHeight, dropLocation_y, plank_x, dropLocation_x } =
     calculateDrop(clickX, size);
   const fallingBall = document.createElement("div");
@@ -216,6 +244,7 @@ function dropAnimation(clickX, onComplete) {
   fallingBall.style.top = `${previewHeight}px`;
   fallingBall.style.display = "block";
   fallingBall.style.transition = "top 360ms ease-in";
+  addWeightVisualization(fallingBall, currentWeight, size);
   document.body.appendChild(fallingBall);
 
   requestAnimationFrame(() => {

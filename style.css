@@ -264,20 +264,57 @@ button:active .undo-icon {
 }
 .preview-circle {
   border-radius: 50%;
-  position: fixed;
+  position: absolute;
   pointer-events: none;
-  display: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
-  transition: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+  display: flex;
+}
+.distance-label {
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  line-height: 1;
+  color: #91808fc3;
+  white-space: nowrap;
+  user-select: none;
+  font-family: "Gabarito", sans-serif;
+}
+.ball-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  line-height: 1;
+  color: #91808fc3;
+  white-space: nowrap;
+  user-select: none;
+  font-family: "Gabarito", sans-serif;
 }
 
 .placed-ball {
-  position: absolute;
-  border-radius: 50%;
   transform: translate(-50%, -100%);
   pointer-events: none;
   z-index: 3;
+  position: absolute;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+
+  user-select: none;
 }
 
 @media (max-width: 768px) {
