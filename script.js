@@ -212,7 +212,7 @@ function updatePreview(mouseX) {
 }
 
 //puts a ball on the plank according to the calculations
-function putBallOnPlank(plank_x, color, size) {
+function putBallOnPlank(plank_x, color, size, weight) {
   const plankElement = document.querySelector(".plank");
   if (!plankElement) return;
   const ball = document.createElement("div");
@@ -224,14 +224,13 @@ function putBallOnPlank(plank_x, color, size) {
   ball.style.height = `${size}px`;
   ball.style.left = `${limit_plankX}px`;
   ball.style.top = "0";
-  addWeightVisualization(ball, currentWeight, size);
-  ball.dataset.weight = String(currentWeight);
+  addWeightVisualization(ball, weight, size);
+  ball.dataset.weight = String(weight);
   plankElement.appendChild(ball);
 }
 
-function dropAnimation(clickX, onComplete) {
-  const color = previewCircle.style.backgroundColor;
-  const size = updateCircleSize();
+function dropAnimation(clickX, weight, color, onComplete) {
+  const size = Math.log(weight + 1) * 17;
   const { previewHeight, dropLocation_y, plank_x, dropLocation_x } =
     calculateDrop(clickX, size);
   const fallingBall = document.createElement("div");
@@ -244,7 +243,7 @@ function dropAnimation(clickX, onComplete) {
   fallingBall.style.top = `${previewHeight}px`;
   fallingBall.style.display = "block";
   fallingBall.style.transition = "top 360ms ease-in";
-  addWeightVisualization(fallingBall, currentWeight, size);
+  addWeightVisualization(fallingBall, weight, size);
   document.body.appendChild(fallingBall);
 
   requestAnimationFrame(() => {
@@ -255,7 +254,7 @@ function dropAnimation(clickX, onComplete) {
     "transitionend",
     () => {
       fallingBall.remove();
-      putBallOnPlank(plank_x, color, size);
+      putBallOnPlank(plank_x, color, size, weight);
       if (typeof onComplete === "function") onComplete();
     },
     { once: true },
@@ -263,8 +262,9 @@ function dropAnimation(clickX, onComplete) {
 }
 
 //..............................................
-//Event Listeners for Clickable Area (The Plank)
+//Event Listeners for Clickable Area (The Plank(.plank))
 //..............................................
+
 function generateEventListeners() {
   generatePreview();
   clickableArea.addEventListener("mouseenter", () => {
@@ -290,25 +290,33 @@ function generateEventListeners() {
     const pivot = plankRect.left + plankRect.width / 2;
     const clickX = e.clientX;
     const distanceFromPivot = clickX - pivot;
+    //the preview wasnt updating itself until the ball is dropped so these temp variables for hold the values then update preview so the current values dont get lost
+    const temp_currentWeight = currentWeight;
+    const temp_currentColor = previewCircle.style.backgroundColor;
 
     if (distanceFromPivot < 0) {
-      leftWeight += currentWeight;
-      leftTorque += calculateTorque(currentWeight, Math.abs(distanceFromPivot));
+      leftWeight += temp_currentWeight;
+      leftTorque += calculateTorque(
+        temp_currentWeight,
+        Math.abs(distanceFromPivot),
+      );
     } else {
-      rightWeight += currentWeight;
+      rightWeight += temp_currentWeight;
       rightTorque += calculateTorque(
-        currentWeight,
+        temp_currentWeight,
         Math.abs(distanceFromPivot),
       );
     }
     const nextTiltAngle = calculateTiltAngle(leftTorque, rightTorque);
+
+    displayInfo();
+    previewCircle.style.backgroundColor = generateColor();
+    updatePreview(clickX);
+
     isDropping = true;
-    dropAnimation(clickX, () => {
+    dropAnimation(clickX, temp_currentWeight, temp_currentColor, () => {
       tiltAngle = nextTiltAngle;
       changePlankTiltVisual(tiltAngle);
-      displayInfo();
-      previewCircle.style.backgroundColor = generateColor();
-      updateCircleSize();
       updatePreview(clickX);
       isDropping = false;
     });
