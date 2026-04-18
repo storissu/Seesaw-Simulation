@@ -269,6 +269,14 @@ button:active .undo-icon {
   transition: none;
 }
 
+.placed-ball {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
 @media (max-width: 768px) {
   .info-boxes {
     flex-direction: column;

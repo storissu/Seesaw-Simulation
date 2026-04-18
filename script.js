@@ -6,6 +6,7 @@ let rightTorque = 0;
 let tiltAngle = 0;
 let previewCircle;
 let previewLine;
+let isDropping = false;
 //you can only click and drop weight in the clickable area
 const clickableArea = document.querySelector(".plank-container");
 
@@ -117,28 +118,104 @@ function generatePreview() {
   updateCircleSize();
 }
 
-function updatePreview(mouseX) {
+function getBallLandingCenter(plankElement, localX, size) {
+  const probeBall = document.createElement("div");
+  probeBall.className = "placed-ball";
+  probeBall.style.width = `${size}px`;
+  probeBall.style.height = `${size}px`;
+  probeBall.style.left = `${localX}px`;
+  probeBall.style.top = "0";
+  probeBall.style.visibility = "hidden";
+  plankElement.appendChild(probeBall);
+
+  const rect = probeBall.getBoundingClientRect();
+  probeBall.remove();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
+function getDropGeometry(mouseX, size, targetTiltAngle = tiltAngle) {
+  const plankElement = document.querySelector(".plank");
   const pivotElement = document.querySelector(".pivot");
   const pivotRect = pivotElement.getBoundingClientRect();
-  const plankRect = clickableArea.getBoundingClientRect();
-  const pivotCenter = plankRect.left + plankRect.width / 2;
+  const plankRect = plankElement.getBoundingClientRect();
+  const clickableRect = clickableArea.getBoundingClientRect();
+  const pivotCenter = clickableRect.left + clickableRect.width / 2;
+  const previewHeight = pivotRect.top - 150;
+  const angleRad = (targetTiltAngle * Math.PI) / 180;
+  const halfPlank = plankElement ? plankElement.offsetWidth / 2 : 0;
+  const rawDx = mouseX - pivotCenter;
+  const dx = Math.max(-halfPlank, Math.min(halfPlank, rawDx));
+  const localX = halfPlank + dx;
+  const landingCenter = getBallLandingCenter(plankElement, localX, size);
+  const dropX = landingCenter.x;
+  const ballCenterY = landingCenter.y;
+  const lineEndY = landingCenter.y + size / 2;
 
-  const plankTop = plankRect.top;
-  const pivotTop = pivotRect.top;
+  return { previewHeight, ballCenterY, lineEndY, dx, localX, dropX };
+}
 
-  const previewHeight = pivotTop - 150;
+function updatePreview(mouseX) {
+  const size = Math.log(currentWeight + 1) * 17;
+  const { previewHeight, lineEndY, dropX } = getDropGeometry(mouseX, size);
 
-  const angleRad = (tiltAngle * Math.PI) / 180;
-
-  const dx = mouseX - pivotCenter;
-  const y_OnPlank = pivotTop - 20 + dx * Math.tan(angleRad);
-
-  previewCircle.style.left = `${mouseX}px`;
+  previewCircle.style.left = `${dropX}px`;
   previewCircle.style.top = `${previewHeight}px`;
 
-  previewLine.style.left = `${mouseX}px`;
+  previewLine.style.left = `${dropX}px`;
   previewLine.style.top = `${previewHeight}px`;
-  previewLine.style.height = `${y_OnPlank - previewHeight}px`;
+  previewLine.style.height = `${lineEndY - previewHeight}px`;
+}
+
+function spawnBallOnPlank(localX, color, size) {
+  const plankElement = document.querySelector(".plank");
+  if (!plankElement) return;
+  const ball = document.createElement("div");
+  const clampedLocalX = Math.max(0, Math.min(plankElement.offsetWidth, localX));
+
+  ball.className = "placed-ball";
+  ball.style.backgroundColor = color;
+  ball.style.width = `${size}px`;
+  ball.style.height = `${size}px`;
+  ball.style.left = `${clampedLocalX}px`;
+  ball.style.top = "0";
+  plankElement.appendChild(ball);
+}
+
+function animateDropToPlank(clickX, onComplete) {
+  const color = previewCircle.style.backgroundColor;
+  const size = Math.log(currentWeight + 1) * 17;
+  const { previewHeight, ballCenterY, localX, dropX } = getDropGeometry(
+    clickX,
+    size,
+  );
+  const fallingBall = document.createElement("div");
+
+  fallingBall.className = "preview-circle";
+  fallingBall.style.backgroundColor = color;
+  fallingBall.style.width = `${size}px`;
+  fallingBall.style.height = `${size}px`;
+  fallingBall.style.left = `${dropX}px`;
+  fallingBall.style.top = `${previewHeight}px`;
+  fallingBall.style.display = "block";
+  fallingBall.style.transition = "top 360ms ease-in";
+  document.body.appendChild(fallingBall);
+
+  requestAnimationFrame(() => {
+    fallingBall.style.top = `${ballCenterY}px`;
+  });
+
+  fallingBall.addEventListener(
+    "transitionend",
+    () => {
+      fallingBall.remove();
+      spawnBallOnPlank(localX, color, size);
+      if (typeof onComplete === "function") onComplete();
+    },
+    { once: true },
+  );
 }
 
 //..............................................
@@ -163,6 +240,8 @@ function generateEventListeners() {
   });
 
   clickableArea.addEventListener("click", (e) => {
+    if (isDropping) return;
+
     const plankRect = clickableArea.getBoundingClientRect();
     const pivot = plankRect.left + plankRect.width / 2;
     const clickX = e.clientX;
@@ -178,13 +257,17 @@ function generateEventListeners() {
         Math.abs(distanceFromPivot),
       );
     }
-    tiltAngle = calculateTiltAngle(leftTorque, rightTorque);
-
-    changePlankTiltVisual(tiltAngle);
-    displayInfo();
-    previewCircle.style.backgroundColor = generateColor();
-    updateCircleSize();
-    updatePreview(clickX);
+    const nextTiltAngle = calculateTiltAngle(leftTorque, rightTorque);
+    isDropping = true;
+    animateDropToPlank(clickX, () => {
+      tiltAngle = nextTiltAngle;
+      changePlankTiltVisual(tiltAngle);
+      displayInfo();
+      previewCircle.style.backgroundColor = generateColor();
+      updateCircleSize();
+      updatePreview(clickX);
+      isDropping = false;
+    });
   });
 
   window.addEventListener("scroll", () => {
