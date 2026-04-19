@@ -192,6 +192,20 @@ function saveCurrentStateToLocalStorage() {
 //.....................................................................
 //VISUAL UPDATES
 //.....................................................................
+//to change the rotation of the plank
+function changePlankTiltVisual(angle) {
+  const plank = document.querySelector(".plank-container");
+  plank.style.transform = `rotate(${angle}deg)`;
+}
+
+//to determine ball sizes according to the weight
+function updateCircleSize() {
+  if (!previewCircle) return;
+  const size = Math.log(currentWeight + 1) * 17;
+  previewCircle.style.width = `${size}px`;
+  previewCircle.style.height = `${size}px`;
+  return size;
+}
 
 //to make sure that ux of the simulator is up to date when the local storage changes
 function updateVisualizationFromStorage() {
@@ -252,21 +266,6 @@ function displayInfo(physics) {
   tiltAngleElement.textContent = `${p.tiltAngle.toFixed(1)}° `;
 }
 
-//to change the rotation of the plank
-function changePlankTiltVisual(angle) {
-  const plank = document.querySelector(".plank-container");
-  plank.style.transform = `rotate(${angle}deg)`;
-}
-
-//to determine ball sizes according to the weight
-function updateCircleSize() {
-  if (!previewCircle) return;
-  const size = Math.log(currentWeight + 1) * 17;
-  previewCircle.style.width = `${size}px`;
-  previewCircle.style.height = `${size}px`;
-  return size;
-}
-
 //to add weight texts on the balls
 function addWeightVisualization(ballElement, weight, size) {
   const labelSize = Math.max(8, Math.min(14, size * 0.34));
@@ -302,7 +301,7 @@ function updatePreview(mouseX) {
     mouseX,
     size,
   );
-
+  //add distance label
   const label_size = Math.max(8, Math.min(14, size * 0.34)); //for text size adjustment according to the weight
   let distance_label = previewCircle.querySelector(".distance-label");
   if (!distance_label) {
@@ -497,6 +496,7 @@ function generateEventListeners() {
     updatePreview(e.clientX);
   });
 
+  //Drop action
   clickableArea.addEventListener("click", (e) => {
     if (isDropping || isPaused) return;
 
@@ -544,6 +544,7 @@ function generateEventListeners() {
 
     previewCircle.style.backgroundColor = generateColor();
     updatePreview(clickX);
+
     //landing animations
     isDropping = true;
     dropAnimation(clickX, temp_currentWeight, temp_currentColor, (placedX) => {
