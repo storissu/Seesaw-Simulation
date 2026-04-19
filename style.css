@@ -254,29 +254,49 @@ button:active .undo-icon {
   border-radius: 8px;
   padding: 10px 10px;
   margin-bottom: 7px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+
   font-family: "Gabarito", sans-serif;
 }
 .history-row {
-  background-color: #b9a4b2a6;
+  background-color: #b9a4b2;
   font-size: 20px;
   color: #ffe9f4;
+  border-radius: 20px;
 }
 .history-header {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+
   font-weight: bold;
   font-size: 20px;
-  background-color: #ffd5e9;
+  background-color: #eac2cf;
   color: #7e7075c6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-radius: 20px;
 }
 
 .history-container {
-  background-color: #ffffff61;
+  background-color: #f8dced;
   border-radius: 20px;
   min-height: 200px;
   padding: 20px;
   max-width: 600px;
   margin: 0 auto;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow: hidden;
+}
+
+#history-list {
+  max-height: 220px;
+  overflow-y: auto;
+  background-color: #f8dced;
+  scrollbar-width: none;
+}
+
+#history-list::-webkit-scrollbar {
+  display: none;
 }
 
 .preview-line {
