@@ -1,6 +1,7 @@
 let previewCircle; // visualization of ball higher from the plank
 let previewLine; // a line that shows the predicted location of the ball that is to be dropped
 let isDropping = false;
+let isPaused = false;
 
 let currentWeight = 0;
 let state_storage = []; // every information held here to use
@@ -408,10 +409,21 @@ function generateEventListeners() {
   generatePreview();
   document.querySelector(".reset-button").addEventListener("click", reset);
 
-  const undoBtn = document.querySelector(".undo-button");
-  if (undoBtn) {
-    undoBtn.addEventListener("click", undo);
+  const undo_button = document.querySelector(".undo-button");
+
+  if (undo_button) {
+    undo_button.addEventListener("click", undo);
   }
+
+  const pause_button = document.querySelector(".pause-button");
+
+  pause_button.addEventListener("click", () => {
+    isPaused = !isPaused;
+
+    pause_button.textContent = isPaused ? "Continue" : "Pause";
+
+    pause_button.classList.toggle("paused", isPaused);
+  });
 
   clickableArea.addEventListener("mouseenter", () => {
     document.body.style.cursor = "none";
@@ -430,7 +442,7 @@ function generateEventListeners() {
   });
 
   clickableArea.addEventListener("click", (e) => {
-    if (isDropping) return;
+    if (isDropping || isPaused) return;
 
     const plankRect = clickableArea.getBoundingClientRect();
     const pivot = plankRect.left + plankRect.width / 2;

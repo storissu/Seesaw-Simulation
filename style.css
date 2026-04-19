@@ -203,7 +203,9 @@ button:active .reset-icon {
   cursor: pointer;
   transition: background-color 0.2s;
 }
-
+.pause-button.paused {
+  background-color: #b55d80ae;
+}
 .pause-button:hover {
   background-color: #52525238;
 }
@@ -258,7 +260,7 @@ button:active .undo-icon {
   font-family: "Gabarito", sans-serif;
 }
 .history-row {
-  background-color: #b9a4b2;
+  background-color: #cbb7c5;
   font-size: 20px;
   color: #ffe9f4;
   border-radius: 20px;
