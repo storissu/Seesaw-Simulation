@@ -5,15 +5,60 @@ let isPaused = false;
 let isTipDisplayed = false;
 let distanceforbalance = 0;
 
+//sound effects
+const dropSound = new Audio("sounds/drop.mp3");
+const clickSound = new Audio("sounds/click.mp3");
+
 let currentWeight = 0;
 let state_storage = []; // every information held here to use
 
 //you cant click unless its on the plank(.plank)
 const clickableArea = document.querySelector(".plank");
 
-//for tip card
+//.................................................................
+//NECESSARY CALCULATIONS
+//.................................................................
+
+//generates random rumbers from 1 to 10 for weight
+function generateWeight() {
+  return Math.floor(Math.random() * 10) + 1;
+}
+
+//calculates torque according to its physical formula
+function calculateTorque(weight, distance) {
+  return weight * distance;
+}
+
+//calculates the tilt angle to determine the angle of the plank
+//formula from the document is used but sensibility was too low so i added maxTorque = 5000 is added
+function calculateTiltAngle(leftTorque, rightTorque) {
+  const diff = rightTorque - leftTorque;
+  const maxTorque = 5000;
+
+  return Math.max(-30, Math.min(30, (diff / maxTorque) * 30));
+}
+
+//generates colors for different balls
+// color palette is using to maintain ux consistency
+function generateColor() {
+  const color_palette = [
+    "#ff69b4",
+    "#ff85c2",
+    "#ff99cc",
+    "#ff4da6",
+    "#ffb6d9",
+    "#fffebe",
+    "#b9e6ff",
+    "#c2f8c5",
+    "#9ac8e1",
+  ];
+
+  return color_palette[Math.floor(Math.random() * color_palette.length)];
+}
+
+//if the user wants to take a hint, calculates where to drop the weight to reach balance
 function calculateBalance() {
-  let features = updateCalculationsFromStorage(state_storage);
+  let features = takeCalculationsFromStorage(state_storage);
   distanceforbalance =
     (features.leftTorque - features.rightTorque) / currentWeight;
   console.log(features.leftTorque);
@@ -26,6 +71,83 @@ function calculateBalance() {
   distanceforbalance = distanceforbalance.toFixed(1);
   return `Drop Your Weight at ${distanceforbalance}px to Balance`;
 }
+
+//to calculate necessary features
+function calculateDrop(mouseX, size) {
+  const plankElement = document.querySelector(".plank");
+  const pivotElement = document.querySelector(".pivot");
+  const pivotRect = pivotElement.getBoundingClientRect();
+  const clickableAreaRect = clickableArea.getBoundingClientRect();
+
+  const center = clickableAreaRect.left + clickableAreaRect.width / 2; //center of the plank
+  const previewHeight = pivotRect.top - 150; //preview ball is placed 150px above the plank center
+  const halfPlank = plankElement ? plankElement.offsetWidth / 2 : 0; //halff of the planks length in px
+  const temp_dx = mouseX - center; //distance between the mouse and the center
+  const dx = Math.max(-halfPlank, Math.min(halfPlank, temp_dx)); //distance between the mouse and the center(limited by the plank)
+  const plank_x = halfPlank + dx; //distance between mouse and the most left side of the plank
+  const dropLocation = getDropLocation(plankElement, plank_x, size);
+  const dropLocation_x = dropLocation.x;
+  const dropLocation_y = dropLocation.y;
+  const previewLineEnd_Y = dropLocation.y + size / 2; //to end the preview line at the top of the plank
+
+  return {
+    previewHeight,
+    dropLocation_y,
+    previewLineEnd_Y,
+    dx,
+    plank_x,
+    dropLocation_x,
+  };
+}
+
+//to determine the landing location on the plank
+function getDropLocation(plankElement, plank_x, size) {
+  const probeBall = document.createElement("div");
+  probeBall.className = "placed-ball";
+  probeBall.style.width = `${size}px`;
+  probeBall.style.height = `${size}px`;
+  probeBall.style.left = `${plank_x}px`;
+  probeBall.style.top = "0";
+  probeBall.style.visibility = "hidden";
+  plankElement.appendChild(probeBall);
+
+  const rect = probeBall.getBoundingClientRect();
+  probeBall.remove();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
+//to sum all the balls and apply the physic calculations to determine the planks latest situation according to the storage
+function takeCalculationsFromStorage(state_storage) {
+  let leftWeight = 0;
+  let rightWeight = 0;
+  let leftTorque = 0;
+  let rightTorque = 0;
+  for (const d of state_storage) {
+    const torque = calculateTorque(d.weight, d.torqueArmPx);
+    if (d.side === "left") {
+      leftWeight += d.weight;
+      leftTorque += torque;
+    } else {
+      rightWeight += d.weight;
+      rightTorque += torque;
+    }
+  }
+  const tiltAngle = calculateTiltAngle(leftTorque, rightTorque);
+  return {
+    leftWeight,
+    rightWeight,
+    leftTorque,
+    rightTorque,
+    tiltAngle,
+  };
+}
+
+//.....................................................................
+//Local Storage
+//.....................................................................
 
 // takes data from local storage and loads it to the state_storage
 function loadState() {
@@ -67,57 +189,16 @@ function saveCurrentStateToLocalStorage() {
   );
 }
 
-//generates random number from 1 to 10 for weights
-function generateWeight() {
-  return Math.floor(Math.random() * 10) + 1;
-}
+//.....................................................................
+//VISUAL UPDATES
+//.....................................................................
 
-//to sum all the balls and apply the physic calculations to determine the planks latest situation according to the storage
-function updateCalculationsFromStorage(state_storage) {
-  let leftWeight = 0;
-  let rightWeight = 0;
-  let leftTorque = 0;
-  let rightTorque = 0;
-  for (const d of state_storage) {
-    const torque = calculateTorque(d.weight, d.torqueArmPx);
-    if (d.side === "left") {
-      leftWeight += d.weight;
-      leftTorque += torque;
-    } else {
-      rightWeight += d.weight;
-      rightTorque += torque;
-    }
-  }
-  const tiltAngle = calculateTiltAngle(leftTorque, rightTorque);
-  return {
-    leftWeight,
-    rightWeight,
-    leftTorque,
-    rightTorque,
-    tiltAngle,
-  };
-}
-
-function addDropEvent(entry) {
-  state_storage.push(entry);
-  saveCurrentStateToLocalStorage();
-  updateVisualizationFromStorage();
-}
-
-function undoDropEvent() {
-  if (state_storage.length === 0) return null;
-  const last = state_storage.pop();
-  saveCurrentStateToLocalStorage();
-  updateVisualizationFromStorage();
-  return last;
-}
-
-//when the local storage changes this function is used to make sure that ux of the simulator is up to date
+//to make sure that ux of the simulator is up to date when the local storage changes
 function updateVisualizationFromStorage() {
   const hoverText = document.querySelector("#tip .hover-text");
   hoverText.textContent = calculateBalance();
 
-  const new_values = updateCalculationsFromStorage(state_storage);
+  const new_values = takeCalculationsFromStorage(state_storage);
   changePlankTiltVisual(new_values.tiltAngle);
 
   //to put balls at the plank
@@ -133,90 +214,13 @@ function updateVisualizationFromStorage() {
   displayDropHistory();
 }
 
-//.................................
-//Calculations
-//.................................
-
-function calculateTorque(weight, distance) {
-  return weight * distance;
-}
-
-//formula from the document is used but sensibility was too low so maxTorque = 5000 is added
-function calculateTiltAngle(leftTorque, rightTorque) {
-  const diff = rightTorque - leftTorque;
-  const maxTorque = 5000;
-
-  return Math.max(-30, Math.min(30, (diff / maxTorque) * 30));
-}
-
-//color palette is using to maintain ux consistency
-function generateColor() {
-  const color_palette = [
-    "#ff69b4",
-    "#ff85c2",
-    "#ff99cc",
-    "#ff4da6",
-    "#ffb6d9",
-    "#fffebe",
-    "#b9e6ff",
-    "#c2f8c5",
-    "#9ac8e1",
-  ];
-
-  return color_palette[Math.floor(Math.random() * color_palette.length)];
-}
-
-function calculateDrop(mouseX, size) {
-  const plankElement = document.querySelector(".plank");
-  const pivotElement = document.querySelector(".pivot");
-  const pivotRect = pivotElement.getBoundingClientRect();
-  const clickableAreaRect = clickableArea.getBoundingClientRect();
-
-  const center = clickableAreaRect.left + clickableAreaRect.width / 2; //center of the plank
-  const previewHeight = pivotRect.top - 150; //preview ball is placed 150px above the plank center
-  const halfPlank = plankElement ? plankElement.offsetWidth / 2 : 0; //halff of the planks length in px
-  const temp_dx = mouseX - center; //distance between the mouse and the center
-  const dx = Math.max(-halfPlank, Math.min(halfPlank, temp_dx)); //distance between the mouse and the center(limited by the plank)
-  const plank_x = halfPlank + dx; //distance between mouse and the most left side of the plank
-  const dropLocation = getDropLocation(plankElement, plank_x, size);
-  const dropLocation_x = dropLocation.x;
-  const dropLocation_y = dropLocation.y;
-  const previewLineEnd_Y = dropLocation.y + size / 2; //to end the preview line at the top of the plank
-
-  return {
-    previewHeight,
-    dropLocation_y,
-    previewLineEnd_Y,
-    dx,
-    plank_x,
-    dropLocation_x,
-  };
-}
-
-function getDropLocation(plankElement, plank_x, size) {
-  const probeBall = document.createElement("div");
-  probeBall.className = "placed-ball";
-  probeBall.style.width = `${size}px`;
-  probeBall.style.height = `${size}px`;
-  probeBall.style.left = `${plank_x}px`;
-  probeBall.style.top = "0";
-  probeBall.style.visibility = "hidden";
-  plankElement.appendChild(probeBall);
-
-  const rect = probeBall.getBoundingClientRect();
-  probeBall.remove();
-  return {
-    x: rect.left + rect.width / 2,
-    y: rect.top + rect.height / 2,
-  };
-}
-
+//display infos in the cards
 function displayInfo(physics) {
   let p;
   if (physics != null) {
     p = physics;
   } else {
-    p = updateCalculationsFromStorage(state_storage);
+    p = takeCalculationsFromStorage(state_storage);
   }
   const rightWeightElement = document
     .getElementById("right-weight")
@@ -248,11 +252,13 @@ function displayInfo(physics) {
   tiltAngleElement.textContent = `${p.tiltAngle.toFixed(1)}° `;
 }
 
+//to change the rotation of the plank
 function changePlankTiltVisual(angle) {
   const plank = document.querySelector(".plank-container");
   plank.style.transform = `rotate(${angle}deg)`;
 }
 
+//to determine ball sizes according to the weight
 function updateCircleSize() {
   if (!previewCircle) return;
   const size = Math.log(currentWeight + 1) * 17;
@@ -261,7 +267,7 @@ function updateCircleSize() {
   return size;
 }
 
-//adding weight texts on the balls
+//to add weight texts on the balls
 function addWeightVisualization(ballElement, weight, size) {
   const labelSize = Math.max(8, Math.min(14, size * 0.34));
   let label = ballElement.querySelector(".ball-label");
@@ -274,7 +280,7 @@ function addWeightVisualization(ballElement, weight, size) {
   label.style.fontSize = `${labelSize}px`;
 }
 
-//generating preview to show predicted landing location of the ball
+//to generate preview to show predicted landing location of the ball
 function generatePreview() {
   previewCircle = document.createElement("div");
   previewCircle.className = "preview-circle";
@@ -288,6 +294,7 @@ function generatePreview() {
   updateCircleSize();
 }
 
+//update displayed preview
 function updatePreview(mouseX) {
   const size = updateCircleSize();
   addWeightVisualization(previewCircle, currentWeight, size);
@@ -356,6 +363,8 @@ function dropAnimation(clickX, weight, color, onComplete) {
   fallingBall.addEventListener(
     "transitionend",
     () => {
+      dropSound.currentTime = 0;
+      dropSound.play();
       fallingBall.remove();
       const plankElement = document.querySelector(".plank");
       const placedX = plankElement
@@ -404,6 +413,10 @@ function displayDropHistory() {
   }
 }
 
+//.....................................................................
+//BUTTON CONTROLS
+//.....................................................................
+
 function reset() {
   state_storage = [];
   currentWeight = generateWeight();
@@ -419,32 +432,54 @@ function reset() {
 
 function undo() {
   if (state_storage.length === 0) return;
-  undoDropEvent();
+  if (state_storage.length === 0) return null;
+  const last = state_storage.pop();
+  saveCurrentStateToLocalStorage();
+  updateVisualizationFromStorage();
   if (previewCircle) {
     previewCircle.style.backgroundColor = generateColor();
     updateCircleSize();
   }
 }
 
+//.....................................................................
+//EVENT LISTENERS
+//.....................................................................
+
 function generateEventListeners() {
   generatePreview();
+
   document.querySelector(".reset-button").addEventListener("click", reset);
+  const reset_button = document.querySelector(".reset-button");
+  if (reset_button) {
+    clickSound.currentTime = 0;
+    reset_button.addEventListener("click", () => {
+      clickSound.currentTime = 0;
+      clickSound.play();
+      reset();
+    });
+  }
 
   const undo_button = document.querySelector(".undo-button");
-
   if (undo_button) {
-    undo_button.addEventListener("click", undo);
+    clickSound.currentTime = 0;
+    undo_button.addEventListener("click", () => {
+      clickSound.currentTime = 0;
+      clickSound.play();
+      undo();
+    });
   }
 
   const pause_button = document.querySelector(".pause-button");
-
-  pause_button.addEventListener("click", () => {
-    isPaused = !isPaused;
-
-    pause_button.textContent = isPaused ? "Continue" : "Pause";
-
-    pause_button.classList.toggle("paused", isPaused);
-  });
+  if (pause_button) {
+    pause_button.addEventListener("click", () => {
+      clickSound.currentTime = 0;
+      clickSound.play();
+      isPaused = !isPaused;
+      pause_button.textContent = isPaused ? "Continue" : "Pause";
+      pause_button.classList.toggle("paused", isPaused);
+    });
+  }
 
   clickableArea.addEventListener("mouseenter", () => {
     document.body.style.cursor = "none";
@@ -476,7 +511,7 @@ function generateEventListeners() {
     const temp_currentColor = previewCircle.style.backgroundColor;
     const side = distanceFromPivot < 0 ? "left" : "right";
 
-    const current = updateCalculationsFromStorage(state_storage);
+    const current = takeCalculationsFromStorage(state_storage);
     let updates;
     if (side === "left") {
       updates = {
@@ -512,14 +547,19 @@ function generateEventListeners() {
     //landing animations
     isDropping = true;
     dropAnimation(clickX, temp_currentWeight, temp_currentColor, (placedX) => {
-      addDropEvent({
+      let entry = {
         weight: temp_currentWeight,
         side,
         torqueArmPx,
         plankX: placedX,
         color: temp_currentColor,
         time: new Date().toISOString(),
-      });
+      };
+
+      state_storage.push(entry);
+      saveCurrentStateToLocalStorage();
+      updateVisualizationFromStorage();
+
       isDropping = false;
     });
   });
