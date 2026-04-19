@@ -249,17 +249,24 @@ button:active .undo-icon {
 .history-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-  padding: 8px 12px;
   align-items: center;
+  flex: 1;
+  border-radius: 8px;
+  padding: 10px 10px;
+  margin-bottom: 7px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  font-family: "Gabarito", sans-serif;
 }
-
+.history-row {
+  background-color: #b9a4b2a6;
+  font-size: 20px;
+  color: #ffe9f4;
+}
 .history-header {
   font-weight: bold;
-  border-bottom: 2px solid #333;
-}
-
-.history-row {
-  border-bottom: 1px solid #ddd;
+  font-size: 20px;
+  background-color: #ffd5e9;
+  color: #7e7075c6;
 }
 
 .history-container {

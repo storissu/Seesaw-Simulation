@@ -85,6 +85,14 @@ function addDropEvent(entry) {
   updateVisualizationFromStorage();
 }
 
+function undoDropEvent() {
+  if (state_storage.length === 0) return null;
+  const last = state_storage.pop();
+  saveCurrentStateToLocalStorage();
+  updateVisualizationFromStorage();
+  return last;
+}
+
 //when the local storage changes this function is used to make sure that ux of the simulator is up to date
 function updateVisualizationFromStorage() {
   const new_values = updateCalculationsFromStorage(state_storage);
@@ -374,8 +382,36 @@ function displayDropHistory() {
   }
 }
 
+function reset() {
+  state_storage = [];
+  currentWeight = generateWeight();
+  isDropping = false;
+  saveCurrentStateToLocalStorage();
+  updateVisualizationFromStorage();
+  if (previewCircle) {
+    previewCircle.style.backgroundColor = generateColor();
+    updateCircleSize();
+  }
+  if (previewLine) previewLine.style.height = "0px";
+}
+
+function undo() {
+  if (state_storage.length === 0) return;
+  undoDropEvent();
+  if (previewCircle) {
+    previewCircle.style.backgroundColor = generateColor();
+    updateCircleSize();
+  }
+}
+
 function generateEventListeners() {
   generatePreview();
+  document.querySelector(".reset-button").addEventListener("click", reset);
+
+  const undoBtn = document.querySelector(".undo-button");
+  if (undoBtn) {
+    undoBtn.addEventListener("click", undo);
+  }
 
   clickableArea.addEventListener("mouseenter", () => {
     document.body.style.cursor = "none";
