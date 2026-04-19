@@ -66,6 +66,26 @@ h2 {
   text-align: center;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
+#tip .hover-text {
+  position: absolute;
+  display: flex;
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: 0.2s;
+  text-align: center;
+  font-size: 14px;
+  font-family: "Gabarito", sans-serif;
+}
+#tip:hover .info-title,
+#tip:hover .info-text {
+  opacity: 0;
+}
+
+#tip:hover .hover-text {
+  opacity: 1;
+}
 
 .info-title {
   font-size: 10px;

@@ -2,12 +2,30 @@ let previewCircle; // visualization of ball higher from the plank
 let previewLine; // a line that shows the predicted location of the ball that is to be dropped
 let isDropping = false;
 let isPaused = false;
+let isTipDisplayed = false;
+let distanceforbalance = 0;
 
 let currentWeight = 0;
 let state_storage = []; // every information held here to use
 
 //you cant click unless its on the plank(.plank)
 const clickableArea = document.querySelector(".plank");
+
+//for tip card
+function calculateBalance() {
+  let features = updateCalculationsFromStorage(state_storage);
+  distanceforbalance =
+    (features.leftTorque - features.rightTorque) / currentWeight;
+  console.log(features.leftTorque);
+  console.log(features.rightTorque);
+
+  if (Math.abs(distanceforbalance) > 200) {
+    return "You Can Not Balance the Seesaw";
+  }
+
+  distanceforbalance = distanceforbalance.toFixed(1);
+  return `Drop Your Weight at ${distanceforbalance}px to Balance`;
+}
 
 // takes data from local storage and loads it to the state_storage
 function loadState() {
@@ -96,6 +114,9 @@ function undoDropEvent() {
 
 //when the local storage changes this function is used to make sure that ux of the simulator is up to date
 function updateVisualizationFromStorage() {
+  const hoverText = document.querySelector("#tip .hover-text");
+  hoverText.textContent = calculateBalance();
+
   const new_values = updateCalculationsFromStorage(state_storage);
   changePlankTiltVisual(new_values.tiltAngle);
 
